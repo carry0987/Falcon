@@ -22,4 +22,14 @@ class HTTPUtil
 
         return $urlSafe;
     }
+
+    public static function getBasicAuthorizationHeader(string $clientId, string $clientSecret, bool $base64Encode = true)
+    {
+        $authorizationHeader = $clientId.':'.$clientSecret;
+        if ($base64Encode) {
+            $authorizationHeader = base64_encode($authorizationHeader);
+        }
+
+        return 'Basic '.$authorizationHeader;
+    }
 }

@@ -6,27 +6,30 @@ use carry0987\Falcon\Exceptions\AuthenticationException;
 use carry0987\Falcon\Utils\HTTPUtil;
 use carry0987\Falcon\Utils\SecurityUtil;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
-class TwitterProvider implements OAuthInterface
+class RedditProvider implements OAuthInterface
 {
     protected $clientId;
     protected $clientSecret;
     protected $redirectUri;
-    protected $apiUrl;
-    protected $authUrl;
+    protected $apiBaseUrl;
+    protected $authorizeUrl;
+    protected $accessTokenUrl;
+    protected $revokeTokenUrl;
     protected $httpClient;
-    protected $scopes;
     protected $token;
+    protected $userAgent = 'Falcon OAuth2.0 Client';
 
     public function __construct(array $config)
     {
         $this->clientId = $config['client_id'];
         $this->clientSecret = $config['client_secret'];
         $this->redirectUri = $config['redirect_uri'];
-        $this->apiUrl = 'https://api.twitter.com';
-        $this->authUrl = 'https://twitter.com';
-        $this->scopes = $config['scopes'] ?? ['tweet.read', 'users.read', 'offline.access'];
-        $this->scopes = implode(' ', $this->scopes);
+        $this->apiBaseUrl = 'https://oauth.reddit.com/api/v1/';
+        $this->authorizeUrl = 'https://www.reddit.com/api/v1/authorize';
+        $this->accessTokenUrl = 'https://www.reddit.com/api/v1/access_token';
+        $this->revokeTokenUrl = 'https://www.reddit.com/api/v1/revoke_token';
         $this->httpClient = new Client();
     }
 
@@ -34,20 +37,17 @@ class TwitterProvider implements OAuthInterface
     {
         $securityUtil = new SecurityUtil($this);
         $state = $securityUtil->generateState();
-        $codeVerifier = $securityUtil->generateCodeVerifier();
-        $codeChallenge = $this->generateCodeChallenge($codeVerifier);
 
         $params = [
-            'response_type' => 'code',
             'client_id' => $this->clientId,
-            'redirect_uri' => $this->redirectUri,
-            'scope' => $this->scopes,
+            'response_type' => 'code',
             'state' => $state,
-            'code_challenge' => $codeChallenge,
-            'code_challenge_method' => 'S256'
+            'redirect_uri' => $this->redirectUri,
+            'duration' => 'permanent',
+            'scope' => 'identity'
         ];
 
-        $url = $this->authUrl.'/i/oauth2/authorize?'.http_build_query($params);
+        $url = $this->authorizeUrl.'?'.http_build_query($params);
 
         if ($redirect) {
             HTTPUtil::redirectURL($url);
@@ -63,32 +63,25 @@ class TwitterProvider implements OAuthInterface
         }
 
         $securityUtil = new SecurityUtil($this);
-        $codeVerifier = $securityUtil->getCodeVerifier();
-        if (!$codeVerifier) {
-            throw new AuthenticationException('Code verifier must be present for getting access token.');
-        }
         if (!$securityUtil->validateState($state)) {
             throw new AuthenticationException('Invalid state.');
         }
 
         try {
-            $response = $this->httpClient->request('POST', $this->apiUrl.'/2/oauth2/token', [
+            $response = $this->httpClient->post($this->accessTokenUrl, [
                 'headers' => [
-                    'Content-Type' => 'application/x-www-form-urlencoded',
                     'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret)
                 ],
                 'form_params' => [
-                    'code' => $code,
                     'grant_type' => 'authorization_code',
-                    'client_id' => $this->clientId,
-                    'redirect_uri' => $this->redirectUri,
-                    'code_verifier' => $codeVerifier
+                    'code' => $code,
+                    'redirect_uri' => $this->redirectUri
                 ]
             ]);
             if ($response->getStatusCode() !== 200) {
                 throw new AuthenticationException('Failed to get authorization token.');
             }
-        } catch (\Exception $e) {
+        } catch (GuzzleException $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
@@ -121,75 +114,79 @@ class TwitterProvider implements OAuthInterface
 
     public function getUser(string $accessToken = null)
     {
-        if (!isset($accessToken)) {
-            throw new AuthenticationException('Access token must be retrieved before fetching user information.');
+        if (!$accessToken) {
+            throw new AuthenticationException('Access token is not available.');
         }
 
         try {
-            $response = $this->httpClient->request('GET', $this->apiUrl.'/2/users/me', [
-                'headers' => ['Authorization' => 'Bearer '.$accessToken]
+            $response = $this->httpClient->get($this->apiBaseUrl.'me', [
+                'headers' => [
+                    'Authorization' => 'bearer '.$accessToken,
+                    'User-Agent' => $this->userAgent
+                ]
             ]);
-        } catch (\Exception $e) {
+            if ($response->getStatusCode() !== 200) {
+                throw new AuthenticationException('Failed to get user data.');
+            }
+        } catch (GuzzleException $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
-        if ($response->getStatusCode() == 200) {
-            return json_decode($response->getBody(), true);
-        } else {
-            throw new AuthenticationException('Failed to get user information.');
-        }
+        $userData = json_decode($response->getBody(), true);
+
+        return $userData;
     }
 
     public function refreshAccessToken(string $refreshToken)
     {
+        if (!$refreshToken) {
+            throw new AuthenticationException('Refresh token is not available.');
+        }
+
         try {
-            $response = $this->httpClient->request('POST', $this->apiUrl.'/2/oauth2/token', [
+            $response = $this->httpClient->post($this->accessTokenUrl, [
                 'headers' => [
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret)
+                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret),
+                    'User-Agent' => $this->userAgent
                 ],
                 'form_params' => [
                     'grant_type' => 'refresh_token',
-                    'refresh_token' => $refreshToken,
-                    'client_id' => $this->clientId,
+                    'refresh_token' => $refreshToken
                 ]
             ]);
-        } catch (\Exception $e) {
+            if ($response->getStatusCode() !== 200) {
+                throw new AuthenticationException('Failed to refresh the access token.');
+            }
+        } catch (GuzzleException $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
-        if ($response->getStatusCode() == 200) {
-            return json_decode($response->getBody(), true);
-        } else {
-            throw new AuthenticationException('Failed to refresh access token.');
-        }
+        $this->token = json_decode($response->getBody(), true);
+
+        return $this->token['access_token'] ?? null;
     }
 
-    public function revokeAccessToken(string $accessToken)
+    public function revokeAccessToken(string $accessToken, string $tokenTypeHint = 'access_token')
     {
+        if (!$accessToken) {
+            throw new AuthenticationException('Access token is required to revoke.');
+        }
+
         try {
-            $response = $this->httpClient->post($this->apiUrl.'/2/oauth2/revoke', [
+            $response = $this->httpClient->post($this->revokeTokenUrl, [
                 'headers' => [
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret)
+                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret),
+                    'User-Agent' => $this->userAgent
                 ],
                 'form_params' => [
                     'token' => $accessToken,
-                    'client_id' => $this->clientId,
-                    'token_type_hint' => 'access_token'
-                ],
+                    'token_type_hint' => $tokenTypeHint
+                ]
             ]);
-        } catch (\Exception $e) {
+        } catch (GuzzleException $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
-        if ($response->getStatusCode() != 200) {
-            throw new AuthenticationException('Failed to revoke access token.');
-        }
-    }
-
-    private function generateCodeChallenge(string $codeVerifier)
-    {
-        return HTTPUtil::base64UrlEncode(pack('H*', hash('sha256', $codeVerifier)));
+        return $response->getStatusCode() === 204;
     }
 }

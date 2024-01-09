@@ -30,6 +30,11 @@ $config = [
             'client_secret' => 'your_twitter_client_secret',
             'redirect_uri' => 'https://your-website.com/path/to/callback.php?provider=twitter'
         ],
+        'reddit' => [
+            'client_id' => 'your_reddit_client_id',
+            'client_secret' => 'your_reddit_client_secret',
+            'redirect_uri' => 'https://your-website.com/path/to/callback.php?provider=reddit'
+        ],
         'line' => [
             'client_id' => 'your_line_channel_id', // Channel ID
             'client_secret' => 'your_line_channel_secret', // Channel secret
@@ -55,6 +60,7 @@ if (isset($_GET['logout'])) {
 switch ($providerName) {
     case 'github':
     case 'twitter':
+    case 'reddit':
     case 'line':
         if (!isset($_GET['code'])) {
             $login_url = $provider->authorize();
