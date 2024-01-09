@@ -1,11 +1,25 @@
 # Falcon
 [![Packgist](https://img.shields.io/packagist/v/carry0987/falcon.svg?style=flat-square)](https://packagist.org/packages/carry0987/falcon)  
-Falcon - A versatile PHP framework designed for seamless integration of third-party social logins. Supports major services including Github, Google, Facebook, Twitter, Line, and Telegram, delivering simple and secure authentication via a unified interface and design patterns.
+Falcon is a versatile PHP framework designed for seamless integration of third-party social platform login mechanisms.  
+It offers simple and secure user authentication through a unified interface and design patterns, making it easy to implement and maintain.  
+Currently, it supports the following major services:
+
+- GitHub
+- Google
+- Facebook
+- Instagram
+- Twitter
+- Line
+- Telegram
+
+Whether you're developing a new application or enhancing an existing system, Falcon can help you quickly implement social login features while ensuring user data security and privacy.
 
 ## Features
-- Easily integrate multiple third-party logins.
-- Unified interface to simplify third-party authentication processes.
-- Support for extending more third-party login providers.
+- **Unified Interface**: Operate all supported social services using standardized methods.
+- **Easy Integration**: Integrate quickly into your project with intuitive configuration and clear documentation.
+- **Security**: Implements the best current security practices to safeguard the login process and data.
+- **Flexible Design**: Easily add or remove specific social services without affecting the existing system architecture.
+- **Open Source Support**: Benefit from the continuous improvements and support of the open-source community.
 
 ## Installation
 Install Falcon into your project with [Composer](https://getcomposer.org/):

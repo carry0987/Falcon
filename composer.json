@@ -1,11 +1,11 @@
 {
     "name": "carry0987/falcon",
-    "description": "Falcon - A versatile PHP framework designed for seamless integration of third-party social logins. Supports major services including Google, Facebook, Twitter, Line, and Telegram, delivering simple and secure authentication via a unified interface and design patterns.",
+    "description": "Falcon - A versatile PHP framework designed for seamless integration of third-party social logins. Supports major services including Google, Facebook, Twitter, etc, delivering simple and secure authentication via a unified interface and design patterns.",
     "type": "library",
     "require": {
         "php": ">=7.4",
         "google/auth": "^1.33",
-        "guzzlehttp/guzzle": "^7.4"
+        "guzzlehttp/guzzle": "^7.8"
     },
     "license": "MIT",
     "autoload": {

@@ -20,6 +20,11 @@ $config = [
             'client_secret' => 'your_facebook_client_secret',
             'redirect_uri' => 'https://your-website.com/path/to/callback.php?provider=facebook'
         ],
+        'instagram' => [
+            'client_id' => 'your_instagram_client_id',
+            'client_secret' => 'your_instagram_client_secret',
+            'redirect_uri' => 'https://your-website.com/path/to/callback.php?provider=instagram'
+        ],
         'twitter' => [
             'client_id' => 'your_twitter_client_id',
             'client_secret' => 'your_twitter_client_secret',
@@ -62,6 +67,7 @@ switch ($providerName) {
         break;
     case 'google':
     case 'facebook':
+    case 'instagram':
         if (!isset($_GET['code'])) {
             $login_url = $provider->authorize();
         } else {

@@ -23,6 +23,7 @@ class Falcon
             'github' => Providers\GithubProvider::class,
             'google' => Providers\GoogleProvider::class,
             'facebook' => Providers\FacebookProvider::class,
+            'instagram' => Providers\InstagramProvider::class,
             'twitter' => Providers\TwitterProvider::class,
             'telegram' => Providers\TelegramProvider::class,
             'line' => Providers\LineProvider::class
