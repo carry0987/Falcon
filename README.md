@@ -9,6 +9,8 @@ Currently, it supports the following major services:
 - Facebook
 - Instagram
 - Twitter
+- Reddit
+- Discord
 - Line
 - Telegram
 
