@@ -6,30 +6,26 @@ use carry0987\Falcon\Exceptions\AuthenticationException;
 use carry0987\Falcon\Utils\HTTPUtil;
 use carry0987\Falcon\Utils\SecurityUtil;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 
-class RedditProvider implements OAuthInterface
+class DiscordProvider implements OAuthInterface
 {
     protected $clientId;
     protected $clientSecret;
     protected $redirectUri;
-    protected $apiBaseUrl;
-    protected $authorizeUrl;
-    protected $accessTokenUrl;
-    protected $revokeTokenUrl;
+    protected $authorizeUrl = 'https://discord.com/api/oauth2/authorize';
+    protected $tokenUrl = 'https://discord.com/api/oauth2/token';
+    protected $apiUrlBase = 'https://discord.com/api/users/@me';
+    protected $revokeUrl = 'https://discord.com/api/oauth2/token/revoke';
+    protected $scopes;
     protected $httpClient;
     protected $token;
-    protected $userAgent = 'Falcon OAuth2.0 Client';
 
     public function __construct(array $config)
     {
         $this->clientId = $config['client_id'];
         $this->clientSecret = $config['client_secret'];
         $this->redirectUri = $config['redirect_uri'];
-        $this->apiBaseUrl = 'https://oauth.reddit.com/api/v1/';
-        $this->authorizeUrl = 'https://www.reddit.com/api/v1/authorize';
-        $this->accessTokenUrl = 'https://www.reddit.com/api/v1/access_token';
-        $this->revokeTokenUrl = 'https://www.reddit.com/api/v1/revoke_token';
+        $this->scopes = $config['scopes'] ?? ['identify', 'email'];
         $this->httpClient = new Client();
     }
 
@@ -41,10 +37,9 @@ class RedditProvider implements OAuthInterface
         $params = [
             'client_id' => $this->clientId,
             'response_type' => 'code',
-            'state' => $state,
             'redirect_uri' => $this->redirectUri,
-            'duration' => 'permanent',
-            'scope' => 'identity'
+            'scope' => implode(' ', $this->scopes),
+            'state' => $state
         ];
 
         $url = $this->authorizeUrl.'?'.http_build_query($params);
@@ -68,24 +63,31 @@ class RedditProvider implements OAuthInterface
         }
 
         try {
-            $response = $this->httpClient->post($this->accessTokenUrl, [
+            // Once the state is verified, we can fetch the access token
+            $response = $this->httpClient->post($this->tokenUrl, [
                 'headers' => [
-                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret)
+                    'Accept' => 'application/json',
                 ],
                 'form_params' => [
                     'grant_type' => 'authorization_code',
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                    'redirect_uri' => $this->redirectUri,
                     'code' => $code,
-                    'redirect_uri' => $this->redirectUri
-                ]
+                ],
             ]);
-            if ($response->getStatusCode() !== 200) {
-                throw new AuthenticationException('Failed to get authorization token.');
+            // Handle bad response
+            if ($response->getStatusCode() != 200) {
+                throw new AuthenticationException('Failed to get access token, HTTP status code: '.$response->getStatusCode());
             }
-        } catch (GuzzleException $e) {
+            $this->token = json_decode($response->getBody()->getContents(), true);
+        } catch (\Exception $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
-        $this->token = json_decode($response->getBody(), true);
+        if (isset($this->token['error'])) {
+            throw new AuthenticationException('Error retrieving access token: '.$this->token['error_description']);
+        }
 
         return $this->token;
     }
@@ -119,22 +121,25 @@ class RedditProvider implements OAuthInterface
         }
 
         try {
-            $response = $this->httpClient->get($this->apiBaseUrl.'me', [
+            $response = $this->httpClient->get($this->apiUrlBase, [
                 'headers' => [
-                    'Authorization' => 'bearer '.$accessToken,
-                    'User-Agent' => $this->userAgent
-                ]
+                    'Authorization' => 'Bearer '.$accessToken,
+                ],
             ]);
             if ($response->getStatusCode() !== 200) {
                 throw new AuthenticationException('Failed to get user data.');
             }
-        } catch (GuzzleException $e) {
+        } catch (\Exception $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
-        $userData = json_decode($response->getBody(), true);
+        $user = json_decode($response->getBody(), true);
 
-        return $userData;
+        if (isset($user['error'])) {
+            throw new AuthenticationException('Error retrieving user profile: '.$user['error_description']);
+        }
+
+        return $user;
     }
 
     public function refreshAccessToken(string $refreshToken)
@@ -144,49 +149,50 @@ class RedditProvider implements OAuthInterface
         }
 
         try {
-            $response = $this->httpClient->post($this->accessTokenUrl, [
-                'headers' => [
-                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret),
-                    'User-Agent' => $this->userAgent
-                ],
+            $response = $this->httpClient->post($this->tokenUrl, [
                 'form_params' => [
                     'grant_type' => 'refresh_token',
-                    'refresh_token' => $refreshToken
-                ]
+                    'refresh_token' => $refreshToken,
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                ],
             ]);
             if ($response->getStatusCode() !== 200) {
-                throw new AuthenticationException('Failed to refresh the access token.');
+                throw new AuthenticationException('Failed to refresh access token.');
             }
-        } catch (GuzzleException $e) {
+        } catch (\Exception $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
         $this->token = json_decode($response->getBody(), true);
 
+        if (isset($this->token['error'])) {
+            throw new AuthenticationException('Error refreshing access token: '.$this->token['error_description']);
+        }
+
         return $this->token['access_token'] ?? null;
     }
 
-    public function revokeAccessToken(string $accessToken, string $tokenTypeHint = 'access_token')
+    public function revokeAccessToken(string $accessToken)
     {
         if (!$accessToken) {
-            throw new AuthenticationException('Access token is required to revoke.');
+            throw new AuthenticationException('Access token is not available.');
         }
 
+        $data = [];
         try {
-            $response = $this->httpClient->post($this->revokeTokenUrl, [
-                'headers' => [
-                    'Authorization' => HTTPUtil::getBasicAuthorizationHeader($this->clientId, $this->clientSecret),
-                    'User-Agent' => $this->userAgent
-                ],
+            $response = $this->httpClient->post($this->revokeUrl, [
                 'form_params' => [
                     'token' => $accessToken,
-                    'token_type_hint' => $tokenTypeHint
-                ]
+                    'client_id' => $this->clientId,
+                    'client_secret' => $this->clientSecret,
+                ],
             ]);
-        } catch (GuzzleException $e) {
+            $data = json_decode($response->getBody(), true);
+        } catch (\Exception $e) {
             throw new AuthenticationException($e->getMessage());
         }
 
-        return $response->getStatusCode() === 204;
+        return !(isset($data['error']));
     }
 }

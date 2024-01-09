@@ -45,7 +45,7 @@ class GithubProvider implements OAuthInterface
         $url = $this->webUrl.'/login/oauth/authorize?'.http_build_query($params);
 
         if ($redirect) {
-            HTTPUtil::redirectURL($url);
+            HTTPUtil::redirectUrl($url);
         }
 
         return $url;

@@ -26,6 +26,7 @@ class Falcon
             'instagram' => Providers\InstagramProvider::class,
             'twitter' => Providers\TwitterProvider::class,
             'reddit' => Providers\RedditProvider::class,
+            'discord' => Providers\DiscordProvider::class,
             'telegram' => Providers\TelegramProvider::class,
             'line' => Providers\LineProvider::class
         ];

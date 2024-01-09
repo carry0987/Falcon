@@ -5,7 +5,7 @@ use carry0987\Falcon\Exceptions\UtilsException;
 
 class HTTPUtil
 {
-    public static function redirectURL(string $url)
+    public static function redirectUrl(string $url)
     {
         if (!headers_sent()) {
             header('Location: '.$url);

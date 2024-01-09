@@ -34,7 +34,7 @@ class GoogleProvider implements OAuthInterface
         $authUrl = $this->oauth2->buildFullAuthorizationUri();
 
         if ($redirect) {
-            HTTPUtil::redirectURL($authUrl);
+            HTTPUtil::redirectUrl($authUrl);
         }
 
         return $authUrl;

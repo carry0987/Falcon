@@ -50,7 +50,7 @@ class TwitterProvider implements OAuthInterface
         $url = $this->authUrl.'/i/oauth2/authorize?'.http_build_query($params);
 
         if ($redirect) {
-            HTTPUtil::redirectURL($url);
+            HTTPUtil::redirectUrl($url);
         }
 
         return $url;

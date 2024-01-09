@@ -44,7 +44,7 @@ class LineProvider implements OAuthInterface
         $url = $this->authUrl.'?'.http_build_query($params);
 
         if ($redirect) {
-            HTTPUtil::redirectURL($url);
+            HTTPUtil::redirectUrl($url);
         }
 
         return $url;

@@ -38,7 +38,7 @@ class FacebookProvider implements OAuthInterface
         ]);
 
         if ($redirect) {
-            HTTPUtil::redirectURL($url);
+            HTTPUtil::redirectUrl($url);
         }
 
         return $url;

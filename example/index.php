@@ -35,6 +35,11 @@ $config = [
             'client_secret' => 'your_reddit_client_secret',
             'redirect_uri' => 'https://your-website.com/path/to/callback.php?provider=reddit'
         ],
+        'discord' => [
+            'client_id' => 'your_discord_client_id',
+            'client_secret' => 'your_discord_client_secret',
+            'redirect_uri' => 'https://your-website.com/path/to/callback.php?provider=discord'
+        ],
         'line' => [
             'client_id' => 'your_line_channel_id', // Channel ID
             'client_secret' => 'your_line_channel_secret', // Channel secret
@@ -61,6 +66,7 @@ switch ($providerName) {
     case 'github':
     case 'twitter':
     case 'reddit':
+    case 'discord':
     case 'line':
         if (!isset($_GET['code'])) {
             $login_url = $provider->authorize();
