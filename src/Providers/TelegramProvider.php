@@ -20,7 +20,7 @@ class TelegramProvider implements OAuthInterface
         $this->botID = $config['client_id']; // Bot token ID
         $this->botToken = $config['client_secret']; // Bot token
         $this->redirectUri = $config['redirect_uri'];
-        $this->callbackUrl = $config['callback_url'];
+        $this->callbackUrl = $config['callback_url'] ?? $this->redirectUri;
         $this->authorizeUrl = 'https://oauth.telegram.org/auth';
     }
 
