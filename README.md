@@ -59,7 +59,7 @@ $config = [
 Next, create an instance of `Falcon` and initiate the login process with the chosen third-party provider:
 
 ```php
-$falcon = new \Carry0987\Falcon\Falcon($config);
+$falcon = new \carry0987\Falcon\Falcon($config);
 $providerName = $_GET['provider'] ?? 'default';
 $provider = $falcon->createProvider($providerName);
 
